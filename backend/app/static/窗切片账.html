@@ -43,9 +43,31 @@
       </header>
 
       <section class="卷">
-        <div class="工具"><button class="按钮 青" id="关">关当前窗</button></div>
-        <div class="表绕"><table><thead><tr><th>切片编号</th><th>窗号</th><th>运单键</th><th>事件数</th><th>物化时</th></tr></thead><tbody id="表"></tbody></table></div>
+        <div class="工具">
+          <button class="按钮 青" id="关">关当前窗</button>
+          <span class="说明" style="margin:0">关窗与换绑共锁：并发换绑不会切出旧键+新键双现行片，也不会双成功。</span>
+        </div>
+        <h2>切片账卡片</h2>
+        <div class="切片卡格" id="卡片"></div>
+        <div class="表绕" style="margin-top:14px"><table><thead><tr><th>切片编号</th><th>窗号</th><th>运单键</th><th>事件数</th><th>物化时</th></tr></thead><tbody id="表"></tbody></table></div>
       </section>
+
+      <section class="卷" id="换绑卷">
+        <h2>观测点换绑 · 只读接口与执行</h2>
+        <p class="说明" id="换绑策略">换绑策略加载中…</p>
+        <div class="工具">
+          <input type="text" id="换旧" placeholder="旧键"/>
+          <input type="text" id="换新" placeholder="新键"/>
+          <select id="换形态">
+            <option value="切流账册拒旧键">切流账册拒旧键</option>
+            <option value="双写两轨">双写两轨（归档）</option>
+          </select>
+          <button class="按钮 青" id="换绑钮">执行换绑</button>
+        </div>
+        <pre class="回执 换绑条" id="换绑回执">只读契约：旧键、新键、拒因或归档键、valid。GET /api/观测点换绑</pre>
+        <div class="表绕"><table><thead><tr><th>旧键</th><th>新键</th><th>形态</th><th>拒因或归档键</th><th>指纹</th><th>valid</th></tr></thead><tbody id="换绑账"></tbody></table></div>
+      </section>
+
       <section class="卷">
         <div class="双栏">
           <p class="说明">切片按运单聚合事件数。邻题空桩可改半截回滚/封印写闸，基线只做整窗物化。</p>
@@ -53,16 +75,45 @@
         </div>
       </section>
       <script>
+      let 换绑记录 = [];
+      function 键徽(键) {
+        const asNew = 换绑记录.find((x) => x.新键 === 键);
+        if (asNew) return `<span class="键态 改绑新键">改绑新键 ← ${潮切.安全文本(asNew.旧键)}</span>`;
+        const asOld = 换绑记录.find((x) => x.旧键 === 键);
+        if (asOld) return `<span class="键态 旧键" title="关窗先于换绑完成时，切片按串行结果封在旧键；不会另有一张新键片">旧键封片 → ${潮切.安全文本(asOld.新键)}</span>`;
+        return `<span class="键态 现行键">现行键</span>`;
+      }
       async function 刷() {
-        const rows = await 潮切.getJSON("/api/窗切片账");
+        const [rows, view] = await Promise.all([
+          潮切.getJSON("/api/窗切片账"),
+          潮切.getJSON("/api/观测点换绑").catch(() => null),
+        ]);
+        换绑记录 = (view && view["记录"]) || [];
         const tb = document.getElementById("表"); tb.innerHTML = "";
-        if (!rows.length) { tb.innerHTML = `<tr><td colspan="5">${潮切.空态("尚无切片。装载窗内事件后点关当前窗。")}</td></tr>`; return; }
+        const cards = document.getElementById("卡片"); cards.innerHTML = "";
+        if (!rows.length) {
+          tb.innerHTML = `<tr><td colspan="5">${潮切.空态("尚无切片。装载窗内事件后点关当前窗。")}</td></tr>`;
+          cards.innerHTML = `<p class="说明">尚无切片卡片。</p>`;
+          return;
+        }
         for (const r of rows) {
-          tb.appendChild(潮切.行(`<td>${潮切.安全文本(r.切片编号)}</td><td>${潮切.安全文本(r.窗号)}</td><td>${潮切.安全文本(r.运单键)}</td><td>${r.事件数}</td><td>${潮切.安全文本(r.物化时)}</td>`));
+          tb.appendChild(潮切.行(
+            `<td>${潮切.安全文本(r.切片编号)}</td><td>${潮切.安全文本(r.窗号)}</td>` +
+            `<td>${潮切.安全文本(r.运单键)} ${键徽(r.运单键)}</td><td>${r.事件数}</td><td>${潮切.安全文本(r.物化时)}</td>`
+          ));
+          const d = document.createElement("div");
+          d.className = "切片卡";
+          d.innerHTML =
+            `<div>${键徽(r.运单键)}</div>` +
+            `<div class="卡键">${潮切.安全文本(r.运单键)}</div>` +
+            `<div class="卡数">${r.事件数}<span style="font-size:13px;color:var(--muted)"> 事件</span></div>` +
+            `<div class="卡meta">${潮切.安全文本(r.窗号)}<br/>${潮切.安全文本(r.切片编号)}<br/>物化 ${潮切.安全文本(r.物化时)}</div>`;
+          cards.appendChild(d);
         }
       }
       document.getElementById("关").onclick = async () => { await 潮切.postJSON("/api/关窗/跑"); await 刷(); };
       刷();
+      潮切.挂载换绑面板({ after: 刷 });
       </script>
 
     </main>

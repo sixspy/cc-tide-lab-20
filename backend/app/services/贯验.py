@@ -2,6 +2,7 @@
 from __future__ import annotations
 from app.db import 连接
 from app.seed import 此刻
+from app.modules import 观测点换绑 as 换绑模
 
 
 def 跑一次() -> dict:
@@ -20,6 +21,8 @@ def 跑一次() -> dict:
         # 基线口径：已物化缓冲事件数应等于切片事件数之和
         对齐 = 1 if int(已物化缓冲) == int(切片事件) else 0
         说明 = "缓冲物化与切片事件数一致" if 对齐 else f"撕裂：已物化缓冲={已物化缓冲} 切片事件={切片事件}"
+        # 换绑附加检查（同票/旧键漏挂），只附加不改基线对齐口径
+        附加 = 换绑模.extra_verify_checks()
         时刻 = 此刻()
         conn.execute(
             """INSERT INTO 窗贯验(时刻,缓冲笔数,切片笔数,迟到笔数,是否对齐,说明)
@@ -35,6 +38,8 @@ def 跑一次() -> dict:
             "迟到": 迟到,
             "是否对齐": bool(对齐),
             "说明": 说明,
+            "附加检查": 附加,
+            "换绑同票": not 附加,
         }
     finally:
         conn.close()

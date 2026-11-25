@@ -90,3 +90,49 @@ export function verifyExplainer(row) {
   if (row["是否对齐"]) return "缓冲已物化事件数与切片账事件数一致，窗账闭合。";
   return row["说明"] || "缓冲与切片撕裂，需回查关窗批次。";
 }
+
+// ---- 观测点换绑：窗切片账卡片的键徽与「不得双键现行片」核对 ----
+export function sliceKeyBadge(key, records) {
+  const recs = records || [];
+  const asNew = recs.find((r) => r["新键"] === key && r["valid"]);
+  if (asNew) return { tone: "ok", text: `改绑新键 ← ${asNew["旧键"]}` };
+  const asOld = recs.find((r) => r["旧键"] === key && r["valid"]);
+  if (asOld) return { tone: "warn", text: `旧键封片 → ${asOld["新键"]}（串行结果，不会另有新键片）` };
+  return { tone: "", text: "现行键" };
+}
+
+/**
+ * 夹具三核对：同一窗内，一次换绑×关窗并发只允许一个现行键组/一张片。
+ * 返回每个窗的键组与是否出现「旧键片 + 新键片」双键。
+ */
+export function detectDoubleKeySlices(slices, records) {
+  const byWindow = {};
+  for (const s of slices || []) {
+    const w = s["窗号"] || "_";
+    (byWindow[w] ||= []).push(s);
+  }
+  const out = {};
+  for (const [w, rows] of Object.entries(byWindow)) {
+    const keys = [...new Set(rows.map((r) => r["运单键"]))];
+    let doubleKey = false;
+    for (const rec of records || []) {
+      if (!rec["valid"]) continue;
+      if (keys.includes(rec["旧键"]) && keys.includes(rec["新键"])) {
+        doubleKey = true; // 同窗既出旧键片又出新键片
+      }
+    }
+    out[w] = { keys, sliceCount: rows.length, doubleKey };
+  }
+  return out;
+}
+
+export function sliceCardModel(row, records) {
+  return {
+    id: row["切片编号"],
+    window: row["窗号"],
+    key: row["运单键"],
+    count: row["事件数"],
+    materializedAt: row["物化时"],
+    badge: sliceKeyBadge(row["运单键"], records),
+  };
+}

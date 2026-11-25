@@ -90,3 +90,41 @@ export function verifyExplainer(row) {
   if (row["是否对齐"]) return "缓冲已物化事件数与切片账事件数一致，窗账闭合。";
   return row["说明"] || "缓冲与切片撕裂，需回查关窗批次。";
 }
+
+// ---- 观测点换绑：窗规策略（选定形态写入窗规 换绑形态） ----
+export const REBIND_STRATEGIES = [
+  { value: "切流账册拒旧键", short: "切流", hint: "旧键装载拒并钉指纹；在途现行改绑新键" },
+  { value: "双写两轨", short: "双轨", hint: "旧键行进只读归档；现行缓冲改读新键" },
+];
+
+export const READONLY_FIELDS = ["旧键", "新键", "拒因或归档键", "valid"];
+
+export function normalizeStrategy(input) {
+  const s = String(input || "").trim();
+  if (!s) return "切流账册拒旧键";
+  if (["切流", "cut", "CUT", "A", "切流账册拒旧键"].includes(s)) return "切流账册拒旧键";
+  if (["双轨", "dual", "DUAL", "B", "归档", "双写两轨"].includes(s)) return "双写两轨";
+  return s;
+}
+
+export function validateRebindProposal(input) {
+  const v = input || {};
+  const oldKey = String(v["旧键"] ?? v.old_key ?? "").trim();
+  const newKey = String(v["新键"] ?? v.new_key ?? "").trim();
+  let error = "";
+  if (!oldKey) error = "缺字段:旧键";
+  else if (!newKey) error = "缺字段:新键";
+  else if (oldKey === newKey) error = "旧键与新键相同，无需换绑";
+  else if (/\s/.test(oldKey) || /\s/.test(newKey)) error = "运单键含空白";
+  return {
+    旧键: oldKey,
+    新键: newKey,
+    形态: normalizeStrategy(v["形态"] ?? v.mode),
+    valid: !error,
+    拒因或归档键: error,
+  };
+}
+
+export function readonlyProbeUrl(oldKey) {
+  return "/api/观测点换绑?旧键=" + encodeURIComponent(oldKey || "");
+}

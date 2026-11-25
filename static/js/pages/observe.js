@@ -90,3 +90,34 @@ export function verifyExplainer(row) {
   if (row["是否对齐"]) return "缓冲已物化事件数与切片账事件数一致，窗账闭合。";
   return row["说明"] || "缓冲与切片撕裂，需回查关窗批次。";
 }
+
+// ---- 观测点换绑：观测流列表须看得出旧键→新键与拒/归档命运 ----
+export const REBIND_FIELDS = ["旧键", "新键", "拒因或归档键", "valid"];
+
+export function rebindFateChip(fate) {
+  const map = {
+    "已拒旧键": "danger",
+    "已归档旧键": "warn",
+    "已旁路归档": "warn",
+    "改绑新键": "ok",
+    "已成片": "ok",
+  };
+  return { text: fate || "", tone: map[fate] || fateChip(fate).tone };
+}
+
+export function rebindKeyMark(row, records) {
+  if (!row) return "";
+  const key = row["运单键"];
+  const recs = records || [];
+  const asNew = recs.find((r) => r["新键"] === key && r["valid"]);
+  if (asNew) return `改绑新键 ← ${asNew["旧键"]}`;
+  const asOld = recs.find((r) => r["旧键"] === key && r["valid"]);
+  if (asOld) return `旧键 → ${asOld["新键"]}（${asOld["形态"] || ""}）`;
+  return row["键态"] === "改绑新键" ? `改绑新键 ← ${row["原键"] || "旧键"}` : "";
+}
+
+export function formatRebindRecord(rec) {
+  if (!rec) return "";
+  const verdict = rec["valid"] ? "valid" : "invalid";
+  return `${rec["旧键"] || "?"} → ${rec["新键"] || "?"} · ${rec["形态"] || ""} · ${rec["拒因或归档键"] || ""} · ${verdict}`;
+}

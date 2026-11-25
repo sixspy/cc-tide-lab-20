@@ -334,3 +334,26 @@ th { background: #f6f0e4; color: var(--muted); font-weight: 600; position: stick
   .侧轨 { position: relative; height: auto; }
   .阶段, .水位, .双栏, .登录壳 { grid-template-columns: 1fr; }
 }
+
+/* 观测点换绑：表单、键态徽标、切片卡片（纯增量） */
+.工具 input[type="text"], .工具 input:not([type]), .工具 select {
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  min-width: 150px;
+}
+.工具 select { min-width: 260px; }
+.键态 { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
+.键态.现行键, .键态.改绑新键 { background: rgba(47,122,79,0.12); color: var(--ok); border-color: transparent; }
+.键态.归档键 { background: rgba(196,122,26,0.16); color: var(--amber); border-color: transparent; }
+.键态.旧键 { background: rgba(177,67,67,0.12); color: var(--danger); border-color: transparent; }
+.切片卡格 { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-top: 12px; }
+.切片卡 { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); display: grid; gap: 6px; }
+.切片卡 .卡键 { font-family: var(--display); font-size: 17px; word-break: break-all; }
+.切片卡 .卡数 { font-size: 26px; font-weight: 700; color: var(--teal); }
+.切片卡 .卡meta { color: var(--muted); font-size: 12px; line-height: 1.6; word-break: break-all; }
+.换绑条 { margin: 10px 0 0; }
+

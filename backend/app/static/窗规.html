@@ -46,6 +46,42 @@
         <h2>窗规原文</h2>
         <pre class="回执" id="规">加载中…</pre>
       </section>
+
+      <section class="卷">
+        <h2>键换绑策略（选定形态写入窗规）</h2>
+        <p class="说明">默认策略存为窗规键 <code>换绑形态</code>。每条换绑账也会记住当次形态，装载按各账形态分流。</p>
+        <div class="工具">
+          <select id="策略形态">
+            <option value="切流账册拒旧键">切流账册拒旧键（旧键装载拒并钉指纹 · 在途现行改绑新键）</option>
+            <option value="双写两轨">双写两轨（旧键行进只读归档 · 现行缓冲改读新键）</option>
+          </select>
+          <button class="按钮 青" id="存策略">保存窗规策略</button>
+          <span class="说明" id="策略回执" style="margin:0"></span>
+        </div>
+      </section>
+
+      <section class="卷" id="换绑卷">
+        <h2>观测点换绑 · 执行与只读接口</h2>
+        <p class="说明" id="换绑策略">换绑策略加载中…</p>
+        <div class="工具">
+          <input type="text" id="换旧" placeholder="旧键"/>
+          <input type="text" id="换新" placeholder="新键"/>
+          <select id="换形态">
+            <option value="切流账册拒旧键">切流账册拒旧键</option>
+            <option value="双写两轨">双写两轨（归档）</option>
+          </select>
+          <button class="按钮 青" id="换绑钮">执行换绑</button>
+        </div>
+        <pre class="回执 换绑条" id="换绑回执">改绑写缓冲与观测点同成败；换绑与关窗共锁，不产生双键现行片。</pre>
+        <div class="表绕"><table><thead><tr><th>旧键</th><th>新键</th><th>形态</th><th>拒因或归档键</th><th>指纹</th><th>valid</th></tr></thead><tbody id="换绑账"></tbody></table></div>
+        <h2 style="margin-top:16px">只读接口探针</h2>
+        <div class="工具">
+          <input type="text" id="查旧" placeholder="输入旧键，如 运单-A"/>
+          <button class="按钮 次" id="查钮">GET /api/观测点换绑?旧键=…</button>
+        </div>
+        <pre class="回执 换绑条" id="只读JSON">返回四字段：旧键、新键、拒因或归档键、valid。</pre>
+      </section>
+
       <section class="卷">
         <h2>空桩目录</h2>
         <p class="说明" id="空桩"></p>
@@ -60,6 +96,30 @@
         const s = await 潮切.getJSON("/api/空桩");
         document.getElementById("空桩").textContent = "空桩 " + s.条数 + "：" + (s.空桩 || []).join(" · ");
       })();
+      </script>
+      <script>
+      async function 刷规原文() {
+        const g = await 潮切.getJSON("/api/窗规");
+        document.getElementById("规").textContent = JSON.stringify(g, null, 2);
+        const sel = document.getElementById("策略形态");
+        if (g["换绑形态"]) sel.value = g["换绑形态"];
+      }
+      document.getElementById("存策略").onclick = async () => {
+        const v = document.getElementById("策略形态").value;
+        const g = await 潮切.postJSON("/api/窗规", { "换绑形态": v });
+        document.getElementById("策略回执").textContent = "已保存：" + g["换绑形态"];
+        await 刷规原文();
+      };
+      document.getElementById("查钮").onclick = async () => {
+        const k = document.getElementById("查旧").value.trim();
+        const box = document.getElementById("只读JSON");
+        try {
+          const j = await 潮切.getJSON("/api/观测点换绑?旧键=" + encodeURIComponent(k));
+          box.textContent = JSON.stringify(j, null, 2);
+        } catch (e) { box.textContent = String(e); }
+      };
+      刷规原文();
+      潮切.挂载换绑面板({ after: 刷规原文 });
       </script>
 
     </main>

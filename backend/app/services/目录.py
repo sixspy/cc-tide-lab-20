@@ -86,3 +86,28 @@ def 概览() -> dict:
         }
     finally:
         conn.close()
+
+
+# --- 观测点换绑只读切口（转发到模块实现，集中目录可读性） ---
+def 换绑列表(旧键: str | None = None, 新键: str | None = None) -> list[dict]:
+    from app.modules.观测点换绑 import 记录列表
+
+    return 记录列表(旧键=旧键, 新键=新键)
+
+
+def 换绑视图() -> dict:
+    from app.modules.观测点换绑 import 只读视图
+
+    return 只读视图()
+
+
+def 换绑归档() -> list[dict]:
+    from app.modules.观测点换绑 import 归档列表
+
+    return 归档列表()
+
+
+def 换绑拒载() -> list[dict]:
+    from app.modules.观测点换绑 import 拒载列表
+
+    return 拒载列表()

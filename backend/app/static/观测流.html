@@ -45,16 +45,52 @@
       <section class="卷">
         <div class="表绕"><table><thead><tr><th>事件编号</th><th>运单键</th><th>网点键</th><th>事件时</th><th>命运</th></tr></thead><tbody id="表"></tbody></table></div>
       </section>
-      <section class="卷"><div class="双栏"><p class="说明">观测点是装载入流。命运应在本页可读：已装载→已入缓冲/已迟到→已成片。</p><div class="侧注">版式：左侧窗时间轴。对拍是顶栏双轨，肉眼应能分开。</div></div></section>
+
+      <section class="卷" id="换绑卷">
+        <h2>观测点换绑账册</h2>
+        <p class="说明" id="换绑策略">换绑策略加载中…（只读接口 <code>GET /api/观测点换绑</code>）</p>
+        <div class="工具">
+          <input type="text" id="换旧" placeholder="旧键，如 运单-A"/>
+          <input type="text" id="换新" placeholder="新键，如 运单-A2"/>
+          <select id="换形态">
+            <option value="切流账册拒旧键">切流账册拒旧键（旧键拒载钉指纹 · 在途改绑新键）</option>
+            <option value="双写两轨">双写两轨（旧键只读归档 · 现行缓冲读新键）</option>
+          </select>
+          <button class="按钮 青" id="换绑钮">执行换绑</button>
+        </div>
+        <pre class="回执 换绑条" id="换绑回执">换绑回执会显示在这里。换绑在单事务内同改缓冲与观测点，且与关窗共锁。</pre>
+        <div class="表绕"><table><thead><tr><th>旧键</th><th>新键</th><th>形态</th><th>拒因或归档键</th><th>指纹</th><th>valid</th></tr></thead><tbody id="换绑账"></tbody></table></div>
+      </section>
+
+      <section class="卷"><div class="双栏"><p class="说明">观测点是装载入流。命运应在本页可读：已装载→已入缓冲/已迟到→已成片；换绑后可见「已拒旧键 / 已归档旧键 / 已旁路归档」，运单键带新旧键态标记。</p><div class="侧注">禁止只改展示键：键态来自底表换绑账与缓冲/观测同票更新。</div></div></section>
       <script>
-      (async () => {
-        const rows = await 潮切.getJSON("/api/观测点");
+      let 换绑记录 = [];
+      async function 刷观测() {
+        const [rows, view] = await Promise.all([
+          潮切.getJSON("/api/观测点"),
+          潮切.getJSON("/api/观测点换绑").catch(() => null),
+        ]);
+        换绑记录 = (view && view["记录"]) || [];
+        const 旧规 = {};
+        for (const r of 换绑记录) 旧规[r["旧键"]] = r;
         const tb = document.getElementById("表");
+        tb.innerHTML = "";
         if (!rows.length) { tb.innerHTML = `<tr><td colspan="5">${潮切.空态("尚无观测点。回潮切台灌窗内成片样例。")}</td></tr>`; return; }
         for (const r of rows) {
-          tb.appendChild(潮切.行(`<td>${潮切.安全文本(r.事件编号)}</td><td>${潮切.安全文本(r.运单键)}</td><td>${潮切.安全文本(r.网点键)}</td><td>${潮切.安全文本(r.事件时)}</td><td>${潮切.徽章(r.命运)}</td>`));
+          let keyCell = 潮切.安全文本(r.运单键);
+          const asOld = 旧规[r.运单键];
+          if (asOld) {
+            keyCell += ` <span class="键态 旧键" title="${潮切.安全文本(asOld["拒因或归档键"] || "")}">旧键 → ${潮切.安全文本(asOld.新键)}</span>`;
+          } else {
+            const asNew = 换绑记录.find((x) => x.新键 === r.运单键);
+            if (asNew) keyCell += ` <span class="键态 改绑新键" title="由旧键 ${潮切.安全文本(asNew.旧键)} 同票改绑">新键 ← ${潮切.安全文本(asNew.旧键)}</span>`;
+          }
+          const tone = /拒/.test(r.命运) ? "危" : (/归档|旁路/.test(r.命运) ? "警" : (/成片|入缓冲/.test(r.命运) ? "好" : ""));
+          tb.appendChild(潮切.行(`<td>${潮切.安全文本(r.事件编号)}</td><td>${keyCell}</td><td>${潮切.安全文本(r.网点键)}</td><td>${潮切.安全文本(r.事件时)}</td><td>${潮切.徽章(r.命运, tone)}</td>`));
         }
-      })();
+      }
+      刷观测();
+      潮切.挂载换绑面板({ after: 刷观测 });
       </script>
 
     </main>

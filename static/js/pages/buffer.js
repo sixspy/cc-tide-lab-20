@@ -90,3 +90,41 @@ export function verifyExplainer(row) {
   if (row["是否对齐"]) return "缓冲已物化事件数与切片账事件数一致，窗账闭合。";
   return row["说明"] || "缓冲与切片撕裂，需回查关窗批次。";
 }
+
+// ---- 观测点换绑：入窗缓冲详情的键态 / 血缘 / 可区分键集合 ----
+export const KEY_STATES = ["现行键", "改绑新键", "归档键"];
+
+export function keyStateBadge(row) {
+  const state = (row && row["键态"]) || "现行键";
+  const tone = state === "改绑新键" ? "ok" : state === "归档键" ? "warn" : "";
+  return { text: state, tone };
+}
+
+export function keyLineage(row) {
+  if (!row) return "";
+  return [
+    row["原键"] ? `原键 ${row["原键"]}` : "",
+    row["归档键"] ? `归档 ${row["归档键"]}` : "",
+  ].filter(Boolean).join("　｜　");
+}
+
+/** 现行键集合必须与归档键集合、被切流旧键可区分。 */
+export function distinguishKeySets(view) {
+  const v = view || {};
+  const current = new Set(v["现行键集合"] || []);
+  const archived = new Set(v["归档键集合"] || []);
+  const oldKeys = new Set(v["旧键集合"] || []);
+  const overlap = [...current].filter((k) => oldKeys.has(k) || archived.has(k));
+  return {
+    current: [...current],
+    archived: [...archived],
+    oldKeys: [...oldKeys],
+    distinguishable: overlap.length === 0,
+    overlap,
+  };
+}
+
+export function bufferDetail(row) {
+  // 入窗缓冲详情：完整行（含键态/原键/归档引用），供 <pre> 展示
+  return JSON.stringify(row || {}, null, 2);
+}
